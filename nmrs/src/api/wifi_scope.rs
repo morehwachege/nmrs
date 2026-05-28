@@ -105,7 +105,10 @@ impl WifiScope {
     /// [`ConnectionInProgress`](crate::ConnectionError::ConnectionInProgress)
     /// if any device is already in a transitional state.
     pub async fn try_connect(&self, ssid: &str, creds: WifiSecurity) -> Result<()> {
-        let _guard = self.connect_guard.lock().await;
+        let _guard = self
+            .connect_guard
+            .try_lock()
+            .map_err(|_| crate::ConnectionError::ConnectionInProgress)?;
         if is_connecting(&self.conn).await? {
             return Err(crate::ConnectionError::ConnectionInProgress);
         }
@@ -131,7 +134,10 @@ impl WifiScope {
         bssid: Option<&str>,
         creds: WifiSecurity,
     ) -> Result<()> {
-        let _guard = self.connect_guard.lock().await;
+        let _guard = self
+            .connect_guard
+            .try_lock()
+            .map_err(|_| crate::ConnectionError::ConnectionInProgress)?;
         if is_connecting(&self.conn).await? {
             return Err(crate::ConnectionError::ConnectionInProgress);
         }
@@ -166,6 +172,7 @@ impl WifiScope {
     /// forgets the profile globally — but is exposed here for ergonomic use
     /// alongside the other per-scope operations.
     pub async fn forget(&self, ssid: &str) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         forget_by_name_and_type(
             &self.conn,
             ssid,

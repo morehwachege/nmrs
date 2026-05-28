@@ -605,6 +605,7 @@ impl NetworkManager {
     /// # }
     /// ```
     pub async fn disconnect_vpn(&self, name: &str) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         disconnect_vpn(&self.conn, name).await
     }
 
@@ -667,6 +668,7 @@ impl NetworkManager {
 
     /// Disconnect a VPN by UUID.
     pub async fn disconnect_vpn_by_uuid(&self, uuid: &str) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         disconnect_vpn_by_uuid(&self.conn, uuid).await
     }
 
@@ -693,6 +695,7 @@ impl NetworkManager {
     /// Returns an error only if the operation fails unexpectedly.
     /// Returns `Ok(())` if no matching VPN connection is found.
     pub async fn forget_vpn(&self, name: &str) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         crate::core::vpn::forget_vpn(&self.conn, name).await
     }
 
@@ -988,7 +991,10 @@ impl NetworkManager {
         interface: Option<&str>,
         creds: WifiSecurity,
     ) -> Result<()> {
-        let _guard = self.connect_guard.lock().await;
+        let _guard = self
+            .connect_guard
+            .try_lock()
+            .map_err(|_| crate::ConnectionError::ConnectionInProgress)?;
         if is_connecting(&self.conn).await? {
             return Err(crate::ConnectionError::ConnectionInProgress);
         }
@@ -1016,7 +1022,10 @@ impl NetworkManager {
         interface: Option<&str>,
         creds: WifiSecurity,
     ) -> Result<()> {
-        let _guard = self.connect_guard.lock().await;
+        let _guard = self
+            .connect_guard
+            .try_lock()
+            .map_err(|_| crate::ConnectionError::ConnectionInProgress)?;
         if is_connecting(&self.conn).await? {
             return Err(crate::ConnectionError::ConnectionInProgress);
         }
@@ -1225,6 +1234,7 @@ impl NetworkManager {
     /// Returns `Ok(())` if one or more connections were deleted successfully,
     /// or if no matching connections were found.
     pub async fn forget(&self, ssid: &str) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         forget_by_name_and_type(
             &self.conn,
             ssid,
@@ -1248,6 +1258,7 @@ impl NetworkManager {
     /// Returns `Ok(())` if the connection was deleted successfully.
     /// Returns `NoSavedConnection` if no matching connection was found.
     pub async fn forget_bluetooth(&self, name: &str) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         forget_by_name_and_type(
             &self.conn,
             name,
