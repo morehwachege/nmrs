@@ -5,7 +5,7 @@ All notable changes to the `nmrs` crate will be documented in this file.
 ## [Unreleased]
 ### Fixed
 - Guard connect operations with async mutex to prevent TOCTOU race between `is_connecting()` and `connect()` ([#427](https://github.com/networkmanager-rs/nmrs/pull/427))
-- Switches saved connection lookup to use `validate_connection_name()` instead of `validate_ssid()`. Using the latter causes VPN profile names longer than 32-bytes to pass through.([#426](https://github.com/networkmanager-rs/nmrs/pull/426))
+- Switches saved connection lookup to use `validate_connection_name()` instead of `validate_ssid()`. Using the latter causes VPN profile names longer than 32-bytes to pass through. ([#426](https://github.com/networkmanager-rs/nmrs/pull/426))
 
 ## [3.1.5] - 2026-05-20
 ### Fixed

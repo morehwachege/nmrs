@@ -27,7 +27,7 @@ use crate::Result;
 use crate::api::models::access_point::AccessPoint;
 use crate::api::models::{Network, WifiSecurity};
 use crate::core::connection::{connect, connect_to_bssid, disconnect, forget_by_name_and_type};
-use crate::core::device::is_connecting;
+use crate::core::device::is_connecting_on_interface;
 use crate::core::scan::{list_access_points, list_networks, scan_networks};
 use crate::core::wifi_device::set_wifi_enabled_for_interface;
 use crate::types::constants::device_type;
@@ -98,18 +98,19 @@ impl WifiScope {
         .await
     }
 
-    /// Atomically checks that no device is currently connecting, then
-    /// connects this interface to the given SSID.
+    /// Atomically checks that this interface is not in a transitional state,
+    /// then connects to the given SSID.
     ///
     /// Returns
     /// [`ConnectionInProgress`](crate::ConnectionError::ConnectionInProgress)
-    /// if any device is already in a transitional state.
+    /// if another task holds the connection mutex or this interface's device
+    /// is already connecting.
     pub async fn try_connect(&self, ssid: &str, creds: WifiSecurity) -> Result<()> {
         let _guard = self
             .connect_guard
             .try_lock()
             .map_err(|_| crate::ConnectionError::ConnectionInProgress)?;
-        if is_connecting(&self.conn).await? {
+        if is_connecting_on_interface(&self.conn, &self.interface).await? {
             return Err(crate::ConnectionError::ConnectionInProgress);
         }
         connect(
@@ -122,12 +123,13 @@ impl WifiScope {
         .await
     }
 
-    /// Atomically checks that no device is currently connecting, then
-    /// connects this interface to a specific BSSID.
+    /// Atomically checks that this interface is not in a transitional state,
+    /// then connects to a specific BSSID.
     ///
     /// Returns
     /// [`ConnectionInProgress`](crate::ConnectionError::ConnectionInProgress)
-    /// if any device is already in a transitional state.
+    /// if another task holds the connection mutex or this interface's device
+    /// is already connecting.
     pub async fn try_connect_to_bssid(
         &self,
         ssid: &str,
@@ -138,7 +140,7 @@ impl WifiScope {
             .connect_guard
             .try_lock()
             .map_err(|_| crate::ConnectionError::ConnectionInProgress)?;
-        if is_connecting(&self.conn).await? {
+        if is_connecting_on_interface(&self.conn, &self.interface).await? {
             return Err(crate::ConnectionError::ConnectionInProgress);
         }
         connect_to_bssid(

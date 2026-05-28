@@ -10,6 +10,7 @@ use zbus::Connection;
 use crate::Result;
 use crate::api::models::{BluetoothDevice, ConnectionError, Device, DeviceIdentity, DeviceState};
 use crate::core::bluetooth::populate_bluez_info;
+use crate::core::connection::get_device_by_interface;
 use crate::core::state_wait::wait_for_wifi_device_ready;
 use crate::dbus::{NMBluetoothProxy, NMDeviceProxy, NMProxy};
 use crate::types::constants::device_type;
@@ -163,6 +164,33 @@ pub(crate) async fn is_connecting(conn: &Connection) -> Result<bool> {
     }
 
     Ok(false)
+}
+
+/// Returns `true` if the device with the given interface name is in a
+/// transitional state.
+///
+/// Returns `false` if no device matches the interface name.
+pub(crate) async fn is_connecting_on_interface(conn: &Connection, interface: &str) -> Result<bool> {
+    let path = match get_device_by_interface(conn, interface).await {
+        Ok(p) => p,
+        Err(ConnectionError::NotFound) => return Ok(false),
+        Err(e) => return Err(e),
+    };
+
+    let dev = NMDeviceProxy::builder(conn)
+        .path(path.clone())?
+        .build()
+        .await?;
+
+    let raw_state = dev
+        .state()
+        .await
+        .map_err(|e| ConnectionError::DbusOperation {
+            context: format!("failed to get state for device {}", path.as_str()),
+            source: e,
+        })?;
+
+    Ok(DeviceState::from(raw_state).is_transitional())
 }
 
 pub(crate) async fn list_bluetooth_devices(conn: &Connection) -> Result<Vec<BluetoothDevice>> {

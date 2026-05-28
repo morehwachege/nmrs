@@ -142,10 +142,13 @@ use crate::types::constants::device_type;
 /// proceeding.
 ///
 /// For callers that want to fail fast instead of waiting, use the
-/// `try_connect` / `try_connect_to_bssid` family: these acquire the
-/// mutex, check [`is_connecting`](Self::is_connecting) under the lock,
-/// and return [`ConnectionInProgress`](crate::ConnectionError::ConnectionInProgress)
-/// immediately if another operation is in flight.
+/// `try_connect` / `try_connect_to_bssid` family: these use
+/// [`try_lock`](tokio::sync::Mutex::try_lock) on the mutex (returning
+/// [`ConnectionInProgress`](crate::ConnectionError::ConnectionInProgress)
+/// if another task holds it), then check [`is_connecting`](Self::is_connecting)
+/// before proceeding. Plain `connect` / `disconnect` use
+/// [`lock`](tokio::sync::Mutex::lock) and will wait until the mutex is
+/// free, which may take up to the configured connection timeout.
 ///
 /// The mutex is shared across all clones of a `NetworkManager` instance.
 /// Operations through a [`WifiScope`](crate::WifiScope) obtained from
@@ -404,6 +407,11 @@ impl NetworkManager {
     /// `None` for the previous behavior of using the first available Wi-Fi
     /// device, or `Some("wlan1")` to pin the connection to a specific
     /// interface.
+    ///
+    /// Concurrent calls on the same [`NetworkManager`] instance are
+    /// serialized: if another task is already connecting, this call waits
+    /// for it to finish (up to the configured timeout). Use
+    /// [`try_connect`](Self::try_connect) to fail immediately instead.
     ///
     /// # Errors
     ///
@@ -956,14 +964,11 @@ impl NetworkManager {
     ///
     /// This is the race-free alternative to calling
     /// [`is_connecting`](Self::is_connecting) followed by
-    /// [`connect`](Self::connect). Both the check and the connection
-    /// happen under the internal connection mutex, so no other task
-    /// sharing this `NetworkManager` instance can start a connection
-    /// in between.
-    ///
-    /// Returns
+    /// [`connect`](Self::connect). Unlike [`connect`](Self::connect), this
+    /// does not wait on the connection mutex: it returns
     /// [`ConnectionInProgress`](crate::ConnectionError::ConnectionInProgress)
-    /// if any device is already in a transitional state.
+    /// if another task holds the mutex or any device is in a transitional
+    /// state.
     ///
     /// # Example
     ///
