@@ -1,6 +1,7 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
-use tokio::sync::watch;
+use tokio::sync::{Mutex, watch};
 use zbus::Connection;
 use zvariant::OwnedValue;
 
@@ -134,15 +135,29 @@ use crate::types::constants::device_type;
 ///
 /// # Concurrency
 ///
-/// Concurrent connection operations (e.g. calling [`connect`](Self::connect)
-/// from multiple tasks simultaneously) are **not supported** and may cause
-/// race conditions. Use [`is_connecting`](Self::is_connecting) to check
-/// whether a connection operation is already in progress before starting
-/// a new one.
+/// All connection-mutating operations (`connect`, `connect_to_bssid`,
+/// `connect_wired`, `connect_bluetooth`, `connect_vpn*`, `disconnect`)
+/// are serialized by an internal mutex. If one task is already inside a
+/// connect call, a second call will wait for the first to finish before
+/// proceeding.
+///
+/// For callers that want to fail fast instead of waiting, use the
+/// `try_connect` / `try_connect_to_bssid` family: these use
+/// [`try_lock`](tokio::sync::Mutex::try_lock) on the mutex (returning
+/// [`ConnectionInProgress`](crate::ConnectionError::ConnectionInProgress)
+/// if another task holds it), then check [`is_connecting`](Self::is_connecting)
+/// before proceeding. Plain `connect` / `disconnect` use
+/// [`lock`](tokio::sync::Mutex::lock) and will wait until the mutex is
+/// free, which may take up to the configured connection timeout.
+///
+/// The mutex is shared across all clones of a `NetworkManager` instance.
+/// Operations through a [`WifiScope`](crate::WifiScope) obtained from
+/// [`wifi()`](Self::wifi) share the same mutex as the parent.
 #[derive(Debug, Clone)]
 pub struct NetworkManager {
     conn: Connection,
     timeout_config: crate::api::models::TimeoutConfig,
+    connect_guard: Arc<Mutex<()>>,
 }
 
 impl NetworkManager {
@@ -155,6 +170,7 @@ impl NetworkManager {
         Ok(Self {
             conn,
             timeout_config: crate::api::models::TimeoutConfig::default(),
+            connect_guard: Arc::new(Mutex::new(())),
         })
     }
 
@@ -184,6 +200,7 @@ impl NetworkManager {
         Ok(Self {
             conn,
             timeout_config,
+            connect_guard: Arc::new(Mutex::new(())),
         })
     }
 
@@ -293,6 +310,7 @@ impl NetworkManager {
             conn: self.conn.clone(),
             interface: interface.into(),
             timeout_config: self.timeout_config,
+            connect_guard: self.connect_guard.clone(),
         }
     }
 
@@ -371,6 +389,7 @@ impl NetworkManager {
         interface: Option<&str>,
         creds: WifiSecurity,
     ) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         connect_to_bssid(
             &self.conn,
             ssid,
@@ -389,6 +408,11 @@ impl NetworkManager {
     /// device, or `Some("wlan1")` to pin the connection to a specific
     /// interface.
     ///
+    /// Concurrent calls on the same [`NetworkManager`] instance are
+    /// serialized: if another task is already connecting, this call waits
+    /// for it to finish (up to the configured timeout). Use
+    /// [`try_connect`](Self::try_connect) to fail immediately instead.
+    ///
     /// # Errors
     ///
     /// Returns `ConnectionError::NotFound` if the network is not visible,
@@ -400,6 +424,7 @@ impl NetworkManager {
         interface: Option<&str>,
         creds: WifiSecurity,
     ) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         connect(
             &self.conn,
             ssid,
@@ -420,6 +445,7 @@ impl NetworkManager {
     ///
     /// Returns `ConnectionError::NoWiredDevice` if no wired device is found.
     pub async fn connect_wired(&self) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         connect_wired(&self.conn, Some(self.timeout_config)).await
     }
 
@@ -444,6 +470,7 @@ impl NetworkManager {
     ///
     /// ```
     pub async fn connect_bluetooth(&self, name: &str, identity: &BluetoothIdentity) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         connect_bluetooth(&self.conn, name, identity, Some(self.timeout_config)).await
     }
 
@@ -514,6 +541,7 @@ impl NetworkManager {
     where
         C: VpnConfig + Into<VpnConfiguration>,
     {
+        let _guard = self.connect_guard.lock().await;
         connect_vpn(&self.conn, config.into(), Some(self.timeout_config)).await
     }
 
@@ -563,7 +591,8 @@ impl NetworkManager {
             builder = builder.password(p);
         }
         let config = builder.build()?;
-        self.connect_vpn(config).await
+        let _guard = self.connect_guard.lock().await;
+        connect_vpn(&self.conn, config.into(), Some(self.timeout_config)).await
     }
 
     /// Disconnects from an active VPN connection by name.
@@ -584,6 +613,7 @@ impl NetworkManager {
     /// # }
     /// ```
     pub async fn disconnect_vpn(&self, name: &str) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         disconnect_vpn(&self.conn, name).await
     }
 
@@ -631,6 +661,7 @@ impl NetworkManager {
     /// # }
     /// ```
     pub async fn connect_vpn_by_uuid(&self, uuid: &str) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         connect_vpn_by_uuid(&self.conn, uuid, Some(self.timeout_config)).await
     }
 
@@ -639,11 +670,13 @@ impl NetworkManager {
     /// Fails with [`VpnIdAmbiguous`](crate::ConnectionError::VpnIdAmbiguous)
     /// if multiple VPNs share the same name.
     pub async fn connect_vpn_by_id(&self, id: &str) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         connect_vpn_by_id(&self.conn, id, Some(self.timeout_config)).await
     }
 
     /// Disconnect a VPN by UUID.
     pub async fn disconnect_vpn_by_uuid(&self, uuid: &str) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         disconnect_vpn_by_uuid(&self.conn, uuid).await
     }
 
@@ -670,6 +703,7 @@ impl NetworkManager {
     /// Returns an error only if the operation fails unexpectedly.
     /// Returns `Ok(())` if no matching VPN connection is found.
     pub async fn forget_vpn(&self, name: &str) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         crate::core::vpn::forget_vpn(&self.conn, name).await
     }
 
@@ -900,8 +934,12 @@ impl NetworkManager {
     /// A device is considered "connecting" when its state is one of:
     /// Prepare, Config, NeedAuth, IpConfig, IpCheck, Secondaries, or Deactivating.
     ///
-    /// Use this to guard against concurrent connection attempts, which are
-    /// not supported and may cause undefined behavior.
+    /// This is a point-in-time snapshot and does **not** hold any lock.
+    /// If you need an atomic "check then connect" operation, use
+    /// [`try_connect`](Self::try_connect) instead, which checks under the
+    /// internal connection mutex and returns
+    /// [`ConnectionInProgress`](crate::ConnectionError::ConnectionInProgress)
+    /// when another operation is in flight.
     ///
     /// # Example
     ///
@@ -919,6 +957,92 @@ impl NetworkManager {
     /// ```
     pub async fn is_connecting(&self) -> Result<bool> {
         is_connecting(&self.conn).await
+    }
+
+    /// Atomically checks that no device is currently connecting, then
+    /// connects to the given Wi-Fi network.
+    ///
+    /// This is the race-free alternative to calling
+    /// [`is_connecting`](Self::is_connecting) followed by
+    /// [`connect`](Self::connect). Unlike [`connect`](Self::connect), this
+    /// does not wait on the connection mutex: it returns
+    /// [`ConnectionInProgress`](crate::ConnectionError::ConnectionInProgress)
+    /// if another task holds the mutex or any device is in a transitional
+    /// state.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use nmrs::{NetworkManager, WifiSecurity, ConnectionError};
+    ///
+    /// # async fn example() -> nmrs::Result<()> {
+    /// let nm = NetworkManager::new().await?;
+    ///
+    /// match nm.try_connect("MyNetwork", None, WifiSecurity::WpaPsk {
+    ///     psk: "password".into(),
+    /// }).await {
+    ///     Ok(()) => println!("Connected!"),
+    ///     Err(ConnectionError::ConnectionInProgress) => {
+    ///         eprintln!("Another connection is already in progress");
+    ///     }
+    ///     Err(e) => eprintln!("Error: {e}"),
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn try_connect(
+        &self,
+        ssid: &str,
+        interface: Option<&str>,
+        creds: WifiSecurity,
+    ) -> Result<()> {
+        let _guard = self
+            .connect_guard
+            .try_lock()
+            .map_err(|_| crate::ConnectionError::ConnectionInProgress)?;
+        if is_connecting(&self.conn).await? {
+            return Err(crate::ConnectionError::ConnectionInProgress);
+        }
+        connect(
+            &self.conn,
+            ssid,
+            creds,
+            interface,
+            Some(self.timeout_config),
+        )
+        .await
+    }
+
+    /// Atomically checks that no device is currently connecting, then
+    /// connects to a specific access point by SSID and optional BSSID.
+    ///
+    /// Like [`try_connect`](Self::try_connect) but targets a specific BSSID.
+    /// Returns
+    /// [`ConnectionInProgress`](crate::ConnectionError::ConnectionInProgress)
+    /// if any device is already in a transitional state.
+    pub async fn try_connect_to_bssid(
+        &self,
+        ssid: &str,
+        bssid: Option<&str>,
+        interface: Option<&str>,
+        creds: WifiSecurity,
+    ) -> Result<()> {
+        let _guard = self
+            .connect_guard
+            .try_lock()
+            .map_err(|_| crate::ConnectionError::ConnectionInProgress)?;
+        if is_connecting(&self.conn).await? {
+            return Err(crate::ConnectionError::ConnectionInProgress);
+        }
+        connect_to_bssid(
+            &self.conn,
+            ssid,
+            bssid,
+            creds,
+            interface,
+            Some(self.timeout_config),
+        )
+        .await
     }
 
     /// Check if a network is connected
@@ -952,6 +1076,7 @@ impl NetworkManager {
     /// # }
     /// ```
     pub async fn disconnect(&self, interface: Option<&str>) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         disconnect(&self.conn, interface, Some(self.timeout_config)).await
     }
 
@@ -1114,6 +1239,7 @@ impl NetworkManager {
     /// Returns `Ok(())` if one or more connections were deleted successfully,
     /// or if no matching connections were found.
     pub async fn forget(&self, ssid: &str) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         forget_by_name_and_type(
             &self.conn,
             ssid,
@@ -1137,6 +1263,7 @@ impl NetworkManager {
     /// Returns `Ok(())` if the connection was deleted successfully.
     /// Returns `NoSavedConnection` if no matching connection was found.
     pub async fn forget_bluetooth(&self, name: &str) -> Result<()> {
+        let _guard = self.connect_guard.lock().await;
         forget_by_name_and_type(
             &self.conn,
             name,

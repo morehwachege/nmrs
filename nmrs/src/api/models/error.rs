@@ -254,6 +254,13 @@ pub enum ConnectionError {
     #[error("bluetooth toggle failed: {0}")]
     BluetoothToggleFailed(String),
 
+    /// A connection operation is already in progress.
+    ///
+    /// Returned by [`try_connect`](crate::NetworkManager::try_connect) and
+    /// related `try_*` methods when another task is already connecting.
+    #[error("a connection operation is already in progress")]
+    ConnectionInProgress,
+
     /// Invalid VLAN ID (must be 1-4094).
     #[error("invalid VLAN ID {id}: must be between 1 and 4094")]
     InvalidVlanId {
