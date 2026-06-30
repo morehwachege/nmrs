@@ -152,6 +152,39 @@ Per-interface operations scope returned by `nm.wifi("wlan1")`.
 
 Methods: `interface()`, `scan()`, `list_networks()`, `list_access_points()`, `connect(ssid, creds)`, `connect_to_bssid(ssid, bssid, creds)`, `disconnect()`, `set_enabled(bool)`, `forget(ssid)`
 
+## Event Models
+
+### NetworkEvent
+
+Refresh-oriented events returned by `network_events()`.
+
+```rust
+pub enum NetworkEvent {
+    AccessPointsChanged,
+    DeviceChanged { interface: Option<String> },
+    ActiveConnectionsChanged,
+    WirelessEnabledChanged,
+    SettingsChanged(SettingsChange),
+    ConnectivityChanged,
+    NetworkManagerRestarted,
+}
+```
+
+### SettingsChange
+
+Saved connection settings changes returned by `settings_events()` and nested
+inside `NetworkEvent::SettingsChanged`.
+
+```rust
+pub enum SettingsChange {
+    Added { path: OwnedObjectPath },
+    Removed { path: OwnedObjectPath },
+    Updated { path: OwnedObjectPath },
+    Reloaded,
+    Unknown,
+}
+```
+
 ### NetworkInfo
 
 Detailed network information from `show_details()`.

@@ -33,12 +33,14 @@ use crate::core::vpn::{
 };
 use crate::core::wifi_device::{list_wifi_devices, set_wifi_enabled_for_interface};
 use crate::models::{
-    BluetoothDevice, BluetoothIdentity, VpnConfig, VpnConfiguration, VpnConnection,
-    VpnConnectionInfo,
+    BluetoothDevice, BluetoothIdentity, NetworkEventStream, SettingsEventStream, VpnConfig,
+    VpnConfiguration, VpnConnection, VpnConnectionInfo,
 };
 use crate::monitoring::device as device_monitor;
+use crate::monitoring::events as event_monitor;
 use crate::monitoring::info::show_details;
 use crate::monitoring::network as network_monitor;
+use crate::monitoring::settings as settings_monitor;
 use crate::monitoring::wifi::{current_connection_info, current_ssid};
 use crate::types::constants::device_type;
 
@@ -1362,6 +1364,29 @@ impl NetworkManager {
     {
         let (_tx, rx) = watch::channel(());
         network_monitor::monitor_network_changes(&self.conn, rx, callback).await
+    }
+
+    /// Creates a unified stream of refresh-oriented NetworkManager events.
+    ///
+    /// This stream merges access point, device, active connection, wireless
+    /// enabled, connectivity, saved settings, and NetworkManager D-Bus owner
+    /// changes. It is intentionally lossy: each event means callers should
+    /// refresh their current view of NetworkManager state.
+    ///
+    /// Manual verification can be done with `nmcli connection add`, `nmcli
+    /// connection delete`, `nmcli connection modify`, `nmcli device wifi
+    /// rescan`, `nmcli radio wifi off/on`, and by restarting NetworkManager.
+    pub async fn network_events(&self) -> Result<NetworkEventStream> {
+        event_monitor::network_events(&self.conn).await
+    }
+
+    /// Creates a stream of saved-connection settings changes.
+    ///
+    /// The stream reports connection additions, removals, and updates. When a
+    /// new connection is added, `nmrs` starts monitoring that connection path
+    /// for future update/removal signals.
+    pub async fn settings_events(&self) -> Result<SettingsEventStream> {
+        settings_monitor::settings_events(&self.conn).await
     }
 
     /// Monitors device state changes in real-time.

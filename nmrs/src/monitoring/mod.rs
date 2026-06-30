@@ -5,7 +5,9 @@
 
 pub(crate) mod bluetooth;
 pub(crate) mod device;
+pub(crate) mod events;
 pub(crate) mod info;
 pub(crate) mod network;
+pub(crate) mod settings;
 pub(crate) mod transport;
 pub(crate) mod wifi;

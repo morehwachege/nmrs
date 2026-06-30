@@ -37,4 +37,12 @@ pub trait NMSettingsConnection {
     /// Connection flags bitmask.
     #[zbus(property)]
     fn flags(&self) -> zbus::Result<u32>;
+
+    /// Signal emitted when this saved connection profile is updated.
+    #[zbus(signal, name = "Updated")]
+    fn updated(&self);
+
+    /// Signal emitted when this saved connection profile is removed.
+    #[zbus(signal, name = "Removed")]
+    fn removed(&self);
 }

@@ -9,6 +9,9 @@ All notable changes to the `nmrs` crate will be documented in this file.
 - `Device::speed_mbps` and `NetworkManager::list_wired_device_details()` expose
   Ethernet link speed, active connection id, MAC addresses, state, and IPs for
   wired-device UI rows. ([#454](https://github.com/networkmanager-rs/nmrs/pull/454))
+- `NetworkEvent`, `SettingsChange`, `NetworkManager::network_events()`, and
+  `NetworkManager::settings_events()` provide stream-based refresh triggers for
+  GUI network applets. ([#455](https://github.com/networkmanager-rs/nmrs/pull/455))
 - Secret-agent lifecycle docs now recommend one long-lived applet registration,
   keeping `SecretAgentHandle` alive, and calling
   `SecretAgentHandle::reregister()` after NetworkManager restarts. ([#454](https://github.com/networkmanager-rs/nmrs/pull/454))
