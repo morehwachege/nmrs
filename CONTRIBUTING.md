@@ -5,7 +5,7 @@ Thank you for wanting to contribute to `nmrs`!
 I'm fairly accepting to all PR's, only with a couple caveats:
 
 - Do not submit low-effort or purely LLM generated code. If you absolutely must, please disclose _how_ you used AI otherwise I will close the PR.
-- Please try to (when possible) contribute to an [issue](https://github.com/cachebag/nmrs/issues). For smaller changes with no existing issue, a PR is fine but for larger changes, please open an issue first.
+- Please try to (when possible) contribute to an [issue](https://github.com/freedesktop-rs/nmrs/issues). For smaller changes with no existing issue, a PR is fine but for larger changes, please open an issue first.
 
 ## Requirements
 
@@ -103,4 +103,4 @@ sudo modprobe -r mac80211_hwsim
 
 ## License
 
-All contributions fall under the [MIT License](https://github.com/cachebag/nmrs?tab=MIT-1-ov-file).
+All contributions fall under the [MIT License](https://github.com/freedesktop-rs/nmrs?tab=MIT-1-ov-file).

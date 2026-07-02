@@ -188,5 +188,5 @@ journalctl -u NetworkManager -f
 ## Getting Help
 
 - **Discord:** [discord.gg/Sk3VfrHrN4](https://discord.gg/Sk3VfrHrN4)
-- **GitHub Issues:** [github.com/cachebag/nmrs/issues](https://github.com/cachebag/nmrs/issues)
+- **GitHub Issues:** [github.com/freedesktop-rs/nmrs/issues](https://github.com/freedesktop-rs/nmrs/issues)
 - **API Docs:** [docs.rs/nmrs](https://docs.rs/nmrs)

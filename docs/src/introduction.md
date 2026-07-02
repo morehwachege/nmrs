@@ -51,7 +51,7 @@ async fn main() -> nmrs::Result<()> {
 ## Community
 
 - **Discord**: Join our [Discord server](https://discord.gg/Sk3VfrHrN4) to chat with developers and users
-- **GitHub**: Report issues, contribute, or browse the code at [github.com/cachebag/nmrs](https://github.com/cachebag/nmrs)
+- **GitHub**: Report issues, contribute, or browse the code at [github.com/freedesktop-rs/nmrs](https://github.com/freedesktop-rs/nmrs)
 - **Crates.io**: Install from [crates.io/crates/nmrs](https://crates.io/crates/nmrs)
 - **API Docs**: Full API reference at [docs.rs/nmrs](https://docs.rs/nmrs)
 

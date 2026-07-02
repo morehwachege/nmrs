@@ -80,7 +80,7 @@ def update_changelog(file_path: Path, version: str, release_type: str) -> bool:
         
         # Update the [Unreleased] comparison link
         unreleased_link_pattern = r'\[Unreleased\]:\s*https://github\.com/[^/]+/[^/]+/compare/[^\s]+\.\.\.HEAD'
-        unreleased_link_replacement = f'[Unreleased]: https://github.com/cachebag/nmrs/compare/{git_tag}...HEAD'
+        unreleased_link_replacement = f'[Unreleased]: https://github.com/freedesktop-rs/nmrs/compare/{git_tag}...HEAD'
         new_content = re.sub(unreleased_link_pattern, unreleased_link_replacement, new_content, flags=re.IGNORECASE)
         
         # Find the previous version tag to create comparison link
@@ -101,7 +101,7 @@ def update_changelog(file_path: Path, version: str, release_type: str) -> bool:
         
         # Create the new version link
         link_label = version if release_type == "stable" else version_tag
-        new_version_link = f'[{link_label}]: https://github.com/cachebag/nmrs/compare/{prev_tag}...{git_tag}\n'
+        new_version_link = f'[{link_label}]: https://github.com/freedesktop-rs/nmrs/compare/{prev_tag}...{git_tag}\n'
         
         # Insert before the Unreleased link
         new_content = re.sub(

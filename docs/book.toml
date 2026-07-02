@@ -18,8 +18,8 @@ use-default-preprocessors = true
 [output.html]
 default-theme = "navy"
 preferred-dark-theme = "navy"
-git-repository-url = "https://github.com/cachebag/nmrs"
-edit-url-template = "https://github.com/cachebag/nmrs/edit/master/docs/{path}"
+git-repository-url = "https://github.com/freedesktop-rs/nmrs"
+edit-url-template = "https://github.com/freedesktop-rs/nmrs/edit/master/docs/{path}"
 site-url = "/nmrs/"
 cname = ""
 additional-css = ["theme/custom.css"]

@@ -68,7 +68,7 @@ We request that you:
 Published security advisories will be available through:
 
 - GitHub Security Advisories on the
-  [nmrs repository](https://github.com/cachebag/nmrs/security/advisories)
+  [nmrs repository](https://github.com/freedesktop-rs/nmrs/security/advisories)
 - [RustSec Advisory Database](https://rustsec.org/)
 - Release notes and changelog entries
 

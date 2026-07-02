@@ -78,5 +78,5 @@ Not directly. Extract the values from the config file and pass them to `WireGuar
 ### Where can I get help?
 
 - **Discord:** [discord.gg/Sk3VfrHrN4](https://discord.gg/Sk3VfrHrN4)
-- **GitHub Issues:** [github.com/cachebag/nmrs/issues](https://github.com/cachebag/nmrs/issues)
+- **GitHub Issues:** [github.com/freedesktop-rs/nmrs/issues](https://github.com/freedesktop-rs/nmrs/issues)
 - **Troubleshooting Guide:** [Troubleshooting](./troubleshooting.md)

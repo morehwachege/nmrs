@@ -2,8 +2,8 @@
 
 nmrs is dual-licensed under your choice of either:
 
-- **MIT License** ([LICENSE-MIT](https://github.com/cachebag/nmrs/blob/master/LICENSE-MIT))
-- **Apache License, Version 2.0** ([LICENSE-APACHE](https://github.com/cachebag/nmrs/blob/master/LICENSE-APACHE))
+- **MIT License** ([LICENSE-MIT](https://github.com/freedesktop-rs/nmrs/blob/master/LICENSE-MIT))
+- **Apache License, Version 2.0** ([LICENSE-APACHE](https://github.com/freedesktop-rs/nmrs/blob/master/LICENSE-APACHE))
 
 ## What This Means
 

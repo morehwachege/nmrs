@@ -28,7 +28,7 @@ compatible with the [`zbus`](https://docs.rs/zbus) executor (Tokio,
 Clone and build from source:
 
 ```bash
-git clone https://github.com/cachebag/nmrs.git
+git clone https://github.com/freedesktop-rs/nmrs.git
 cd nmrs/nmrs
 cargo build --release
 ```

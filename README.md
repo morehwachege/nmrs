@@ -3,15 +3,15 @@
 [![Crates.io](https://img.shields.io/crates/v/nmrs)](https://crates.io/crates/nmrs)
 [![Discord](https://img.shields.io/badge/chat-on%20discord-7289da?logo=discord&logoColor=white)](https://discord.gg/Sk3VfrHrN4)
 [![Documentation](https://docs.rs/nmrs/badge.svg)](https://docs.rs/nmrs)
-[![User Guide](https://img.shields.io/badge/docs-mdBook-blue)](https://cachebag.github.io/nmrs/)
-[![CI](https://github.com/cachebag/nmrs/actions/workflows/ci.yml/badge.svg)](https://github.com/cachebag/nmrs/actions/workflows/ci.yml)
+[![User Guide](https://img.shields.io/badge/docs-mdBook-blue)](https://freedesktop-rs.github.io/nmrs/)
+[![CI](https://github.com/freedesktop-rs/nmrs/actions/workflows/ci.yml/badge.svg)](https://github.com/freedesktop-rs/nmrs/actions/workflows/ci.yml)
 [![License](https://img.shields.io/crates/l/nmrs)](LICENSE)
 
 An async-first Rust API for [NetworkManager](https://networkmanager.dev/) over [D-Bus](https://dbus.freedesktop.org/doc/dbus-specification.html). The goal is to provide a safe and simple high-level API for managing Wi-Fi connections on Linux systems, built on [`zbus`](https://docs.rs/zbus) for reliable D-Bus communication.
 
 ## Documentation
 
-- **[User Guide](https://cachebag.github.io/nmrs/)** - Comprehensive guide with tutorials and examples
+- **[User Guide](https://freedesktop-rs.github.io/nmrs/)** - Comprehensive guide with tutorials and examples
 - **[API Documentation](https://docs.rs/nmrs)** - Complete API reference on docs.rs
 - **[Discord](https://discord.gg/Sk3VfrHrN4)** - Join our community for help and discussion
 
@@ -19,7 +19,7 @@ An async-first Rust API for [NetworkManager](https://networkmanager.dev/) over [
 
 _Please consider joining the [**Discord**](https://discord.gg/Sk3VfrHrN4). It's a welcoming community to both developers who want to contribute and/or learn about and discuss nmrs as well as users that would like to be engaged with the development process._
 
-The best way to get started with `nmrs` is the [User Guide](https://cachebag.github.io/nmrs/), which includes comprehensive tutorials and examples. For detailed API information, see the [API documentation](https://docs.rs/nmrs).
+The best way to get started with `nmrs` is the [User Guide](https://freedesktop-rs.github.io/nmrs/), which includes comprehensive tutorials and examples. For detailed API information, see the [API documentation](https://docs.rs/nmrs).
 
 ## Sample usage
 
@@ -109,7 +109,7 @@ To follow and/or discuss the development of nmrs, you can join the [public Disco
 - [cosmic-applets](https://github.com/pop-os/cosmic-applets) by [@pop-os](https://github.com/pop-os)
 - [nmrs-tui](https://github.com/y2w8/nmrs-tui) by [@y2w8](https://github.com/y2w8)
 - [gaypanel](https://codeberg.org/pastthepixels/gaypanel) by [@pastthepixels](https://codeberg.org/pastthepixels)
-- [nmrs-gui](https://github.com/networkmanager-rs/nmrs-gui) by [@networkmanager-rs](https://github.com/networkmanager-rs)
+- [nmrs-gui](https://github.com/freedesktop-rs/nmrs-gui) by [@freedesktop-rs](https://github.com/freedesktop-rs)
 - [android-auto](https://github.com/uglyoldbob/android-auto) by [uglyoldbob](https://github.com/uglyoldbob)
 
 # Roadmap / Implementation Status
