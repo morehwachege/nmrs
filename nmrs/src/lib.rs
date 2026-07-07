@@ -138,7 +138,14 @@
 //! NetworkManager settings dictionaries. Most callers should reach for the
 //! higher-level [`NetworkManager`] API; these builders are exposed for
 //! advanced use cases that need to assemble the raw settings dictionary
-//! before calling a D-Bus method directly.
+//! before calling a D-Bus method directly via
+//! [`dbus_connection`](crate::NetworkManager::dbus_connection) and [`raw`](crate::raw).
+//!
+//! ## Raw D-Bus Access
+//!
+//! The [`raw`] module re-exports [`zbus`] and [`zvariant`] so builder output
+//! types stay compatible with the connection returned by
+//! [`NetworkManager::dbus_connection`](crate::NetworkManager::dbus_connection).
 //!
 //! ## Secret Agent
 //!
@@ -310,6 +317,16 @@ mod util;
 /// lifecycle, and a full example.
 pub mod agent;
 
+/// Low-level D-Bus dependencies used by [`builders`](crate::builders).
+///
+/// Re-exports [`zbus`] and [`zvariant`] so advanced callers can construct
+/// proxies against [`NetworkManager::dbus_connection`](crate::NetworkManager::dbus_connection)
+/// without pinning their own potentially incompatible versions.
+pub mod raw {
+    pub use zbus;
+    pub use zvariant;
+}
+
 // ============================================================================
 // Public API
 // ============================================================================
@@ -334,7 +351,8 @@ pub mod agent;
 /// and [`connect_vpn`](crate::NetworkManager::connect_vpn). Use these
 /// builders only when you need to feed a raw settings dictionary to
 /// NetworkManager's `AddConnection` or `AddAndActivateConnection` D-Bus
-/// methods directly.
+/// methods directly via [`dbus_connection`](crate::NetworkManager::dbus_connection)
+/// and [`raw`](crate::raw).
 ///
 /// # Example
 ///

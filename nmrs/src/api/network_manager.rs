@@ -234,6 +234,37 @@ impl NetworkManager {
         self.timeout_config
     }
 
+    /// Returns the underlying system D-Bus connection.
+    ///
+    /// Advanced callers can use this together with [`builders`](crate::builders)
+    /// and [`raw`](crate::raw) to invoke NetworkManager D-Bus methods such as
+    /// `AddConnection` or `AddAndActivateConnection` on the same connection
+    /// managed by this [`NetworkManager`] instance.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use nmrs::builders::{WifiConnectionBuilder, WifiMode};
+    /// use nmrs::NetworkManager;
+    ///
+    /// # async fn example() -> nmrs::Result<()> {
+    /// let nm = NetworkManager::new().await?;
+    /// let settings = WifiConnectionBuilder::new("Hotspot")
+    ///     .wpa_psk("password")
+    ///     .mode(WifiMode::Ap)
+    ///     .ipv4_shared()
+    ///     .build();
+    ///
+    /// let _conn = nm.dbus_connection();
+    /// // Pass `settings` to NetworkManager's AddAndActivateConnection via
+    /// // `nmrs::raw::zbus` proxies on `_conn`.
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn dbus_connection(&self) -> &Connection {
+        &self.conn
+    }
+
     /// List all network devices managed by NetworkManager.
     pub async fn list_devices(&self) -> Result<Vec<Device>> {
         list_devices(&self.conn).await

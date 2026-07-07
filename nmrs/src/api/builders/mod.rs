@@ -34,7 +34,9 @@
 //! builders directly. They are exposed for advanced use cases where you
 //! need fine-grained control over the raw settings dictionary before
 //! handing it to NetworkManager's `AddConnection` or
-//! `AddAndActivateConnection` D-Bus methods.
+//! `AddAndActivateConnection` D-Bus methods via
+//! [`NetworkManager::dbus_connection`](crate::NetworkManager::dbus_connection)
+//! and [`raw`](crate::raw).
 //!
 //! # Examples
 //!
@@ -52,6 +54,27 @@
 //!     &opts,
 //! );
 //! let eth = build_ethernet_connection("eth0", &opts);
+//! ```
+//!
+//! ## Wi-Fi hotspot (fluent builder + D-Bus)
+//!
+//! ```no_run
+//! use nmrs::builders::{WifiConnectionBuilder, WifiMode};
+//! use nmrs::NetworkManager;
+//!
+//! # async fn example() -> nmrs::Result<()> {
+//! let nm = NetworkManager::new().await?;
+//! let settings = WifiConnectionBuilder::new("Hotspot")
+//!     .wpa_psk("password")
+//!     .mode(WifiMode::Ap)
+//!     .ipv4_shared()
+//!     .build();
+//!
+//! let _conn = nm.dbus_connection();
+//! // Use `settings` with NetworkManager's AddAndActivateConnection on `_conn`
+//! // via `nmrs::raw::zbus` proxies.
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## WireGuard (fluent builder)
@@ -76,7 +99,8 @@
 //! ```
 //!
 //! The returned settings can then be passed to NetworkManager's
-//! `AddConnection` or `AddAndActivateConnection` D-Bus methods.
+//! `AddConnection` or `AddAndActivateConnection` D-Bus methods through
+//! [`NetworkManager::dbus_connection`](crate::NetworkManager::dbus_connection).
 
 pub mod bluetooth;
 pub mod connection_builder;
