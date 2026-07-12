@@ -125,7 +125,7 @@ mod tests {
         assert!(!ConnectivityState::Portal.is_usable_for_internet());
         assert!(!ConnectivityState::Limited.is_usable_for_internet());
         assert!(!ConnectivityState::Unknown.is_usable_for_internet());
-}
+    }
 
     #[test]
     fn display_test() {
@@ -135,5 +135,4 @@ mod tests {
         assert_eq!(format!("{}", ConnectivityState::Limited), "limited");
         assert_eq!(format!("{}", ConnectivityState::Full), "full");
     }
-    
 }
