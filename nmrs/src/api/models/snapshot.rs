@@ -76,7 +76,7 @@ impl NetworkSnapshot {
         for ap in &self.access_points {
             if &ap.ssid != "" {
             grouped
-                .entry((ap.interface.clone(), (ap.ssid.clone())))
+                .entry((ap.interface.clone(), ap.ssid.clone()))
                 .or_default()
                 .push(ap.clone());
             }
