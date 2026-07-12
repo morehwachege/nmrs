@@ -74,10 +74,12 @@ impl NetworkSnapshot {
     pub fn wifi_groups(&self) -> Vec<WifiNetworkGroup> {
         let mut grouped: HashMap<(String, String), Vec<AccessPoint>> = HashMap::new();
         for ap in &self.access_points {
+            if &ap.ssid != "" {
             grouped
-                .entry((ap.interface.clone(), ap.ssid.clone()))
+                .entry((ap.interface.clone(), (ap.ssid.clone())))
                 .or_default()
                 .push(ap.clone());
+            }
         }
 
         let mut groups = grouped
@@ -667,5 +669,20 @@ mod tests {
         assert!(!vpns["wg-vpn"].active);
         assert_eq!(vpns["active-vpn"].kind, Some(VpnKind::Plugin));
         assert_eq!(vpns["wg-vpn"].kind, Some(VpnKind::WireGuard));
+    }
+
+    #[test]
+    fn hidden_networks_not_shown() {
+        let snapshot = snapshot(
+            vec![
+                ap("wlan0", "", "AA:AA:AA:AA:AA:01", 70),
+                ap("wlan1", "Cafe", "BB:BB:BB:BB:BB:01", 90),
+            ],
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+        );
+        let groups = snapshot.wifi_groups();
+        assert_eq!(groups.len(), 1);
     }
 }
