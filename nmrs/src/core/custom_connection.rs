@@ -217,7 +217,8 @@ mod tests {
     async fn resolve_specific_object_parses_explicit_path() {
         let settings = sample_wifi_settings();
         let path =
-            resolve_specific_object(&settings, Some("/org/freedesktop/NetworkManager/Devices/3")).await
+            resolve_specific_object(&settings, Some("/org/freedesktop/NetworkManager/Devices/3"))
+                .await
                 .unwrap();
         assert_eq!(path.as_str(), "/org/freedesktop/NetworkManager/Devices/3");
     }

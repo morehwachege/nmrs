@@ -284,11 +284,10 @@ pub(crate) async fn extract_connection_state_reason(
 /// // => "/org/bluez/hci1/dev_00_1A_7D_DA_71_13"
 /// ```
 pub(crate) async fn bluez_device_path(bdaddr: &str, adapter: Option<&str>) -> String {
-
     let default_adapter = get_adapter().await;
     let default_adapter = match default_adapter {
         Ok(val) => val.unwrap(),
-        Err(err) => format!("Failed to get adapter with error: {}", err)
+        Err(err) => format!("Failed to get adapter with error: {}", err),
     };
     let adapter = adapter.unwrap_or(&default_adapter);
     format!("/org/bluez/{adapter}/dev_{}", bdaddr.replace(':', "_"))
@@ -298,14 +297,16 @@ pub(crate) async fn bluez_device_path(bdaddr: &str, adapter: Option<&str>) -> St
 async fn get_adapter() -> zbus::Result<Option<String>> {
     let conn = Connection::system().await?;
     let proxy = Proxy::new(
-        &conn, "org.bluez", 
-        "/", 
-        "org.freedesktop.DBus.ObjectManager").await?;
-     let objects: HashMap<
-        OwnedObjectPath,
-        HashMap<String, HashMap<String, OwnedValue>>,
-    > = proxy.call("GetManagedObjects", &()).await?;
-    let adapter= objects.iter()
+        &conn,
+        "org.bluez",
+        "/",
+        "org.freedesktop.DBus.ObjectManager",
+    )
+    .await?;
+    let objects: HashMap<OwnedObjectPath, HashMap<String, HashMap<String, OwnedValue>>> =
+        proxy.call("GetManagedObjects", &()).await?;
+    let adapter = objects
+        .iter()
         .filter(|(_, interfaces)| interfaces.contains_key("org.bluez.Adapter1"))
         .find_map(|(path, _)| path.split("/").last().map(str::to_string));
     Ok(adapter)

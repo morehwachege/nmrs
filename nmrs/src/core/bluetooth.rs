@@ -143,10 +143,9 @@ pub(crate) async fn connect_bluetooth(
     // Check for saved connection
     let saved = get_saved_connection_path(conn, name).await?;
 
-    let specific_object = OwnedObjectPath::try_from(bluez_device_path(
-        &settings.bdaddr,
-        settings.adapter.as_deref(),
-    ).await)
+    let specific_object = OwnedObjectPath::try_from(
+        bluez_device_path(&settings.bdaddr, settings.adapter.as_deref()).await,
+    )
     .map_err(|e| ConnectionError::InvalidAddress(format!("Invalid BlueZ path: {e}")))?;
 
     match saved {
