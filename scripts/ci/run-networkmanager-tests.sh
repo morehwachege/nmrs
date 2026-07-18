@@ -1,0 +1,248 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly mode="${1:-all}"
+readonly script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly project_root="$(cd "${script_dir}/../.." && pwd)"
+readonly runtime_dir="$(mktemp -d "${TMPDIR:-/tmp}/nmrs-integration.XXXXXX")"
+readonly networkmanager_log="${runtime_dir}/networkmanager.log"
+readonly hostapd_log="${runtime_dir}/hostapd.log"
+readonly wpa_supplicant_log="${runtime_dir}/wpa_supplicant.log"
+readonly hostapd_config="${runtime_dir}/hostapd.conf"
+readonly networkmanager_config="${runtime_dir}/NetworkManager.conf"
+networkmanager_pid=""
+hostapd_pid=""
+wpa_supplicant_pid=""
+hwsim_station_interface=""
+
+stop_process() {
+    local pid="$1"
+
+    if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
+        kill "${pid}" || true
+        wait "${pid}" || true
+    fi
+}
+
+cleanup() {
+    stop_process "${networkmanager_pid}"
+    stop_process "${wpa_supplicant_pid}"
+    stop_process "${hostapd_pid}"
+    rm -rf "${runtime_dir}"
+}
+
+print_networkmanager_log() {
+    echo "NetworkManager did not become ready. Its log follows:" >&2
+    cat "${networkmanager_log}" >&2 || true
+}
+
+print_hostapd_log() {
+    echo "hostapd did not become ready. Its log follows:" >&2
+    cat "${hostapd_log}" >&2 || true
+}
+
+print_wpa_supplicant_log() {
+    echo "wpa_supplicant did not become ready. Its log follows:" >&2
+    cat "${wpa_supplicant_log}" >&2 || true
+}
+
+start_wpa_supplicant() {
+    mkdir -p /run/wpa_supplicant
+
+    wpa_supplicant \
+        -u \
+        -s \
+        -O /run/wpa_supplicant \
+        -f "${wpa_supplicant_log}" > /dev/null 2>&1 &
+    wpa_supplicant_pid=$!
+
+    for _ in $(seq 1 15); do
+        if dbus-send \
+            --system \
+            --dest=org.freedesktop.DBus \
+            --type=method_call \
+            --print-reply \
+            /org/freedesktop/DBus \
+            org.freedesktop.DBus.NameHasOwner \
+            string:fi.w1.wpa_supplicant1 2>/dev/null | grep --quiet 'boolean true'; then
+            return
+        fi
+
+        if ! kill -0 "${wpa_supplicant_pid}" 2>/dev/null; then
+            print_wpa_supplicant_log
+            exit 1
+        fi
+
+        sleep 1
+    done
+
+    print_wpa_supplicant_log
+    exit 1
+}
+
+setup_hwsim_access_point() {
+    local ap_interface
+    local -a wifi_interfaces
+
+    mapfile -t wifi_interfaces < <(
+        iw dev | awk '$1 == "Interface" { print $2 }' |
+            while read -r interface; do
+                if ethtool -i "${interface}" 2>/dev/null | grep --fixed-strings --quiet 'driver: mac80211_hwsim'; then
+                    printf '%s\n' "${interface}"
+                fi
+            done | sort
+    )
+    if (( ${#wifi_interfaces[@]} != 2 )); then
+        echo "Expected exactly two mac80211_hwsim interfaces, found ${#wifi_interfaces[@]}" >&2
+        iw dev >&2 || true
+        exit 1
+    fi
+
+    ap_interface="${wifi_interfaces[0]}"
+    hwsim_station_interface="${wifi_interfaces[1]}"
+
+    printf '%s\n' \
+        "interface=${ap_interface}" \
+        'driver=nl80211' \
+        'ssid=nmrs-hwsim' \
+        'hw_mode=g' \
+        'channel=1' \
+        'wpa=2' \
+        'wpa_passphrase=nmrs-hwsim-password' \
+        'wpa_key_mgmt=WPA-PSK' \
+        'rsn_pairwise=CCMP' >"${hostapd_config}"
+
+    hostapd "${hostapd_config}" >"${hostapd_log}" 2>&1 &
+    hostapd_pid=$!
+
+    for _ in $(seq 1 15); do
+        if grep --quiet 'AP-ENABLED' "${hostapd_log}"; then
+            break
+        fi
+
+        if ! kill -0 "${hostapd_pid}" 2>/dev/null; then
+            print_hostapd_log
+            exit 1
+        fi
+
+        sleep 1
+    done
+
+    if ! grep --quiet 'AP-ENABLED' "${hostapd_log}"; then
+        print_hostapd_log
+        exit 1
+    fi
+
+    # Keep NetworkManager away from the runner's interfaces and AP radio.
+    printf '%s\n' \
+        '[main]' \
+        'plugins=keyfile' \
+        'no-auto-default=*' \
+        'auth-polkit=root-only' \
+        'dhcp=internal' \
+        '' \
+        '[keyfile]' \
+        "unmanaged-devices=*,except:interface-name:${hwsim_station_interface}" \
+        '' \
+        '[device-hwsim-station]' \
+        "match-device=interface-name:=${hwsim_station_interface}" \
+        'managed=1' >"${networkmanager_config}"
+}
+
+trap cleanup EXIT
+
+case "${mode}" in
+    all|integration|wifi-integration|shell) ;;
+    *)
+        echo "Usage: $0 [all|integration|wifi-integration|shell]" >&2
+        exit 2
+        ;;
+esac
+
+if [[ "${mode}" == "wifi-integration" ]]; then
+    setup_hwsim_access_point
+fi
+
+mkdir -p /run/dbus
+dbus-daemon \
+    --config-file="${project_root}/scripts/ci/dbus-system.conf" \
+    --fork \
+    --nopidfile
+
+if [[ "${mode}" == "wifi-integration" ]]; then
+    start_wpa_supplicant
+
+    NetworkManager \
+        --config="${networkmanager_config}" \
+        --no-daemon \
+        --log-level=INFO >"${networkmanager_log}" 2>&1 &
+else
+    NetworkManager --no-daemon --log-level=INFO >"${networkmanager_log}" 2>&1 &
+fi
+networkmanager_pid=$!
+
+for _ in $(seq 1 30); do
+    if nmcli --terse --fields RUNNING general 2>/dev/null | grep --quiet '^running$'; then
+        break
+    fi
+
+    if ! kill -0 "${networkmanager_pid}" 2>/dev/null; then
+        print_networkmanager_log
+        exit 1
+    fi
+
+    sleep 1
+done
+
+if ! nmcli --terse --fields RUNNING general 2>/dev/null | grep --quiet '^running$'; then
+    print_networkmanager_log
+    exit 1
+fi
+
+nmcli general status
+
+export NMRS_REQUIRE_NETWORKMANAGER=1
+
+if [[ "${mode}" == "wifi-integration" ]]; then
+    nmcli device set "${hwsim_station_interface}" managed yes
+    nmcli radio wifi on
+
+    for _ in $(seq 1 30); do
+        station_state="$(nmcli --terse --fields DEVICE,TYPE,STATE device status | awk -F: -v interface="${hwsim_station_interface}" '$1 == interface && $2 == "wifi" { print $3; exit }')"
+        if [[ "${station_state}" == "disconnected" || "${station_state}" == "connected" ]]; then
+            break
+        fi
+
+        sleep 1
+    done
+
+    if [[ "${station_state:-}" != "disconnected" && "${station_state:-}" != "connected" ]]; then
+        echo "NetworkManager did not make ${hwsim_station_interface} ready for scanning" >&2
+        nmcli device status >&2 || true
+        nmcli -f GENERAL.DEVICE,GENERAL.TYPE,GENERAL.STATE,GENERAL.REASON,GENERAL.NM-MANAGED \
+            device show "${hwsim_station_interface}" >&2 || true
+        print_networkmanager_log
+        print_wpa_supplicant_log
+        exit 1
+    fi
+
+    export NMRS_REQUIRE_WIFI=1
+    export NMRS_EXPECT_WIFI_SSID=nmrs-hwsim
+    export NMRS_WIFI_INTERFACE="${hwsim_station_interface}"
+fi
+
+case "${mode}" in
+    all)
+        cargo test --locked --all-features --workspace
+        ;;
+    integration)
+        cargo test --locked --test integration_test --all-features
+        ;;
+    wifi-integration)
+        cargo test --locked --test integration_test --all-features
+        ;;
+    shell)
+        bash
+        ;;
+esac

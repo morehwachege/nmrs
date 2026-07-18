@@ -25,8 +25,11 @@ docker build -t nmrs-lib .
 **To run tests:**
 
 ```bash
-docker compose run test
+docker compose run --rm test
 ```
+
+This starts an isolated system D-Bus and NetworkManager instance, waits for it
+to be ready, and requires integration tests to connect to it.
 
 **To run an interactive shell:**
 
@@ -94,6 +97,14 @@ If you do not have access to WiFi hardware (for whatever odd reason that is), yo
 ```bash
 sudo modprobe mac80211_hwsim radios=2
 cargo test --test integration_test --all-features
+sudo modprobe -r mac80211_hwsim
+```
+
+For the same virtual-radio setup used in CI, on a Linux host with Docker:
+
+```bash
+sudo modprobe mac80211_hwsim radios=2
+docker compose run --build --rm test-wifi-integration
 sudo modprobe -r mac80211_hwsim
 ```
 

@@ -28,20 +28,26 @@ async fn has_ethernet_device(nm: &NetworkManager) -> bool {
         .unwrap_or(false)
 }
 
-/// Skip tests if NetworkManager is not available
+/// Skip tests if NetworkManager is not available outside the integration harness.
 macro_rules! require_networkmanager {
     () => {
         if !is_networkmanager_available().await {
+            if std::env::var_os("NMRS_REQUIRE_NETWORKMANAGER").is_some() {
+                panic!("NetworkManager is required but unavailable");
+            }
             eprintln!("Skipping test: NetworkManager not available");
             return;
         }
     };
 }
 
-/// Skip tests if WiFi device is not available
+/// Skip tests if WiFi device is not available outside the WiFi integration harness.
 macro_rules! require_wifi {
     ($nm:expr) => {
         if !has_wifi_device($nm).await {
+            if std::env::var_os("NMRS_REQUIRE_WIFI").is_some() {
+                panic!("WiFi is required but no WiFi device is available");
+            }
             eprintln!("Skipping test: No WiFi device available");
             return;
         }
@@ -271,6 +277,53 @@ async fn test_list_networks() {
         // `list_networks` can include deduplicated entries where device identity
         // is not populated; that is valid for this API.
     }
+}
+
+/// Ensure the virtual access point is visible when the WiFi integration harness runs.
+#[tokio::test]
+#[serial]
+async fn test_hwsim_access_point_is_discovered() {
+    let expected_ssid = match std::env::var("NMRS_EXPECT_WIFI_SSID") {
+        Ok(ssid) => ssid,
+        Err(_) => return,
+    };
+    let interface = std::env::var("NMRS_WIFI_INTERFACE")
+        .expect("WiFi integration harness did not provide the station interface");
+
+    require_networkmanager!();
+
+    let nm = NetworkManager::new()
+        .await
+        .expect("Failed to create NetworkManager");
+    require_wifi!(&nm);
+
+    nm.set_wireless_enabled(true)
+        .await
+        .expect("Failed to enable WiFi");
+
+    let wifi = nm.wifi(&interface);
+    for _ in 0..3 {
+        wifi.scan()
+            .await
+            .expect("Failed to scan for the virtual access point");
+        sleep(Duration::from_secs(2)).await;
+
+        let networks = wifi
+            .list_networks()
+            .await
+            .expect("Failed to list scanned networks");
+
+        if let Some(network) = networks
+            .iter()
+            .find(|network| network.ssid == expected_ssid)
+        {
+            assert!(network.secured, "The virtual access point must be secured");
+            assert!(network.is_psk, "The virtual access point must use WPA-PSK");
+            return;
+        }
+    }
+
+    panic!("The virtual access point {expected_ssid:?} was not discovered");
 }
 
 /// Test getting current SSID

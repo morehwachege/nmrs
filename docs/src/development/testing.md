@@ -108,11 +108,47 @@ mod tests {
 For reproducible testing with a real NetworkManager instance:
 
 ```bash
-docker build -t nmrs-test .
-docker run --privileged nmrs-test cargo test
+docker compose run --build --rm test-integration
 ```
 
-The project includes a Dockerfile configured for testing.
+This starts a private system D-Bus and NetworkManager instance, waits for it to
+be ready, and fails if tests cannot connect to the daemon. Wi-Fi-specific tests
+continue to skip until the test environment has a Wi-Fi device.
+
+### Virtual Wi-Fi Integration
+
+On a Linux host, the CI-equivalent test target creates two virtual radios with
+`mac80211_hwsim`. One radio advertises a WPA-PSK test network using `hostapd`;
+NetworkManager manages the other radio and scans for that access point.
+
+```bash
+sudo modprobe mac80211_hwsim radios=2
+docker compose run --build --rm test-wifi-integration
+sudo modprobe -r mac80211_hwsim
+```
+
+This service uses host networking and is therefore intended for Linux hosts and
+the GitHub Actions runner, not Docker Desktop.
+
+It also mounts the host's `/run/udev` read-only so NetworkManager can manage
+the newly created hwsim links.
+
+The self-hosted runner service account needs passwordless `sudo` permission for
+`modprobe mac80211_hwsim radios=2` and `modprobe -r mac80211_hwsim`; CI invokes
+both commands with `sudo -n`.
+
+### Approving Wi-Fi CI Runs
+
+Pull requests send the virtual Wi-Fi job to the `self-hosted-pr-integration`
+GitHub Actions environment before it is assigned to the self-hosted runner. To
+require manual approval, create that environment in the repository's **Settings
+> Environments**, add yourself as a required reviewer, and leave **Prevent
+self-review** disabled. The job will show **Waiting for review** in the Actions
+run; select **Review deployments** and approve that environment to start only
+the Wi-Fi integration job.
+
+Pushes to `master` use the unprotected `self-hosted-integration` environment
+and start automatically.
 
 ## CI/CD
 
@@ -121,7 +157,8 @@ Tests run automatically via GitHub Actions on every push and pull request. The C
 1. Checks formatting (`cargo fmt --check`)
 2. Runs clippy (`cargo clippy`)
 3. Runs unit tests (`cargo test`)
-4. Builds documentation (`mdbook build`)
+4. Runs integration tests against NetworkManager in Docker
+5. Builds documentation (`mdbook build`)
 
 ## Next Steps
 
