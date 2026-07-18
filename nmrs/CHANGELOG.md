@@ -34,6 +34,8 @@ All notable changes to the `nmrs` crate will be documented in this file.
   enumerated connection object while its properties are being read. ([#505](https://github.com/freedesktop-rs/nmrs/pull/505))
 - Retain the discovering interface on inactive Wi-Fi scan results, matching
   the documented `Network::device` contract. ([#505](https://github.com/freedesktop-rs/nmrs/pull/505))
+- Wait through NetworkManager's transient `Unavailable` state while a managed
+  Wi-Fi radio recovers from a rfkill transition. ([#505](https://github.com/freedesktop-rs/nmrs/pull/505))
 - Map secret-agent registration conflicts to the documented typed errors and
   handle concurrent same-key requests, cancellation, closed responders, and
   bounded-queue backpressure without false cancellation or hangs. ([#505](https://github.com/freedesktop-rs/nmrs/pull/505))

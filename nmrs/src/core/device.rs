@@ -392,6 +392,8 @@ pub(crate) async fn wait_for_wifi_ready(conn: &Connection) -> Result<()> {
     let mut found_wifi_device = false;
 
     // Prefer a ready device. An unmanaged radio can appear before a usable one.
+    // A managed radio can temporarily be Unavailable while rfkill is lifted,
+    // so keep it as a wait candidate.
     for dev_path in devices {
         let dev = NMDeviceProxy::builder(conn)
             .path(dev_path.clone())?
@@ -414,9 +416,7 @@ pub(crate) async fn wait_for_wifi_ready(conn: &Connection) -> Result<()> {
             return Ok(());
         }
 
-        if !matches!(state, DeviceState::Unmanaged | DeviceState::Unavailable)
-            && pending_wifi_device.is_none()
-        {
+        if state != DeviceState::Unmanaged && pending_wifi_device.is_none() {
             pending_wifi_device = Some(dev_path);
         }
     }
