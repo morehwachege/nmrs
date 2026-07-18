@@ -99,8 +99,9 @@ jobs:
   integration:
     name: NetworkManager WiFi Integration
     runs-on: [self-hosted, linux, x64]
-    # Self-hosted runners must not execute code supplied by forked pull requests.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Pull requests wait for a maintainer to approve this environment.
+    environment:
+      name: ${{ github.event_name == 'pull_request' && 'self-hosted-pr-integration' || 'self-hosted-integration' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
