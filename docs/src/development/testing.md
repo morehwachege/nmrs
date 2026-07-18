@@ -130,6 +130,10 @@ sudo modprobe -r mac80211_hwsim
 This service uses host networking and is therefore intended for Linux hosts and
 the GitHub Actions runner, not Docker Desktop.
 
+The self-hosted runner service account needs passwordless `sudo` permission for
+`modprobe mac80211_hwsim radios=2` and `modprobe -r mac80211_hwsim`; CI invokes
+both commands with `sudo -n`.
+
 ### Approving Wi-Fi CI Runs
 
 Pull requests send the virtual Wi-Fi job to the `self-hosted-pr-integration`

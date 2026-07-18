@@ -107,14 +107,14 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Load virtual WiFi radios
-        run: sudo modprobe mac80211_hwsim radios=2
+        run: sudo -n modprobe mac80211_hwsim radios=2
 
       - name: Run integration tests with NetworkManager and virtual WiFi
         run: docker compose run --build --rm test-wifi-integration
 
       - name: Unload virtual WiFi radios
         if: always()
-        run: sudo modprobe -r mac80211_hwsim || true
+        run: sudo -n modprobe -r mac80211_hwsim || true
 
   semver:
     name: Semantic Versioning Check
