@@ -85,9 +85,16 @@ setup_hwsim_access_point() {
     local ap_interface
     local -a wifi_interfaces
 
-    mapfile -t wifi_interfaces < <(iw dev | awk '$1 == "Interface" { print $2 }' | sort)
-    if (( ${#wifi_interfaces[@]} < 2 )); then
-        echo "Expected two mac80211_hwsim interfaces, found ${#wifi_interfaces[@]}" >&2
+    mapfile -t wifi_interfaces < <(
+        iw dev | awk '$1 == "Interface" { print $2 }' |
+            while read -r interface; do
+                if ethtool -i "${interface}" 2>/dev/null | grep --fixed-strings --quiet 'driver: mac80211_hwsim'; then
+                    printf '%s\n' "${interface}"
+                fi
+            done | sort
+    )
+    if (( ${#wifi_interfaces[@]} != 2 )); then
+        echo "Expected exactly two mac80211_hwsim interfaces, found ${#wifi_interfaces[@]}" >&2
         iw dev >&2 || true
         exit 1
     fi
@@ -135,15 +142,8 @@ setup_hwsim_access_point() {
         'auth-polkit=root-only' \
         'dhcp=internal' \
         '' \
-        '[device-hwsim-station]' \
-        "match-device=interface-name:${hwsim_station_interface}" \
-        'managed=1' \
-        'stop-match=yes' \
-        '' \
-        '[device-default]' \
-        'match-device=*' \
-        'managed=0' \
-        'stop-match=yes' >"${networkmanager_config}"
+        '[keyfile]' \
+        "unmanaged-devices=*,except:interface-name:${hwsim_station_interface}" >"${networkmanager_config}"
 }
 
 trap cleanup EXIT
@@ -213,6 +213,8 @@ if [[ "${mode}" == "wifi-integration" ]]; then
     if [[ "${station_state:-}" != "disconnected" && "${station_state:-}" != "connected" ]]; then
         echo "NetworkManager did not make ${hwsim_station_interface} ready for scanning" >&2
         nmcli device status >&2 || true
+        nmcli -f GENERAL.DEVICE,GENERAL.TYPE,GENERAL.STATE,GENERAL.REASON,GENERAL.MANAGED \
+            device show "${hwsim_station_interface}" >&2 || true
         print_networkmanager_log
         print_wpa_supplicant_log
         exit 1
